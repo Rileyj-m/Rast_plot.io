@@ -5,8 +5,11 @@
     <meta charset="utf-8">
     <title>Raster Plot: Net Radiation</title>
     <!--Load d3.js-->
-    <script src="https://d3js.org/d3.v5.js"></script>
+    <script src="https://d3js.org/d3.v4.js"></script>
+    <script src="geotiff.min.js"></script>
     <script src="https://d3js.org/d3-geo-projection.v3.min.js"></script>
+    <script src="https://d3js.org/topojson.v1.min.js"></script>
+    <script src="https://unpkg.com/d3-contour@1"></script>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
@@ -34,7 +37,7 @@
                 Select a Month <span class="caret"></span>
             </button>
             <ul class="dropdown-menu btn-block">
-                <li><a class="dropdown-item" href="#" onclick="update('Jan')">January</a></li>
+                <li><a class="dropdown-item" href="#" onclick="reloadImg('radiation.TIFF')">January</a></li>
                 <li><a class="dropdown-item" href="#" onclick="update('Feb')">February</a></li>
                 <li><a class="dropdown-item" href="#" onclick="update('Mar')">March</a></li>
                 <li><a class="dropdown-item" href="#" onclick="update('Apr')">April</a></li>
@@ -48,70 +51,111 @@
                 <li><a class="dropdown-item" href="#" onclick="update('Dec')">December</a></li>
             </ul>
         </div>
-    <br>
-    <div id="Origin" style="text-align: center;">
-        <svg id="World" width="1440" height="720"></svg>
-    </div>
-    <script type="text/javascript">
-        const svg = d3.select("#World"),
-            width = +svg.attr("width"),
-            height = +svg.attr("height");
+        <br>
+        <div id="Origin" style="text-align: center;">
+            <svg id="World" width="720" height="360"></svg>
+        </div>
+        <script type="text/javascript">
 
-        svg.append("g")
-            .attr("id", "continents");
+            const svg = d3.select("#World"),
+                width = +svg.attr("width"),
+                height = +svg.attr("height");
 
-        svg.append("g")
-            .attr("id", "radiation")
+            let projection = d3.geoMercator()
+                .scale(230)
+                .translate([width / 2, height / 2]);
 
-        var imageChange = "radiation2.png"
-
-        var canvas = d3.select("#radiation")
-            .attr("width", width)
-            .attr("height", height)
-
-        let projection = d3.geoMercator()
-            .scale(230)
-            .translate([width / 2, height / 2]);
-
-        // Load external data and boot
-        d3.json("world.json").then(function (data) {
-
-            // Draw the map
-            svg.select("#continents")
-                .selectAll("path")
-                .data(data.features)
-                .join("path")
-                .attr("fill", "white")
-                .attr("d", d3.geoPath()
-                    .projection(projection)
-                )
-                .style("stroke", "black")
-
-            svg.select('#radiation').append("image")
-                .attr("xlink:href", imageChange)
-                .attr("class", "raster")
-                // preserve the aspect ratio
+            var canvas = d3.select("#Origin").append("canvas")
                 .attr("width", width)
                 .attr("height", height)
-                .attr("opacity", 0.85)
-        })
 
-        function update(month) {
-            imageChange = "radiation.TIFF"
-            d3.select("#image")
-                .attr("xlink:href", imageChange)
-        }
+            var context = canvas.node().getContext("2d");
 
-        canvis = svg.select("#canvas")
+            d3.request("rad21.tiff")
+                .responseType("arraybuffer")
+                .get(function (error, tiffData) {
+                    d3.json("world.json", function (error, world) {
+                        if (error) console.log(error);
+                        var countries = world
+                        var path = d3.geoPath()
+                            .projection(projection)
+                            .context(context);
 
-        var context = canvis.node().getContext('2d')
+                        context.beginPath();
+                        context.fillStyle = "black";
+                        context.strokesyle = "red";
+                        path(countries);
+                        context.fill();
+                        context.stroke();
 
-        var image = new Image()
-        image.onload = function () {
-            context.drawImage(image, 0, 0, image.width, image.height, 0, 0, width, height)
-        }
-        image.src = 'Radiation.png'
-    </script>
+                        var canvasRaster = d3.select("#Origin").append("canvas")
+                        .attr("id", "canvasRaster")
+                        .attr("width", width)
+                        .attr("height", height);
+
+                        var contextRaster = canvasRaster.node().getContext("2d");
+
+                        var tiff = GeoTIFF.parse(tiffData.response),
+                            image = tiff.getImage(),
+                            m = image.getHeight(),
+                            n = image.getWidth(),
+                            values = image.readRasters()[0];
+                        console.log(values);
+
+                        var color = d3.scaleSequential(d3.interpolateMagma)
+                            .domain(d3.extent(values));
+
+                        var contours = d3.contours()
+                            .size([n, m]);
+
+                        d3.select("#canvasRaster")
+                            // .attr("stroke", "#000")
+                            // .attr("stroke-width", 0.5)
+                            // .attr("stroke-linejoin", "round")
+                            .selectAll("path")
+                            .data(contours(values))
+                            .enter().append("path")
+                            .attr("fill", function (d) { return color(d.value); })
+                            .attr("d", path)
+                            .style("opacity", 0.1);
+                    });
+                });
+
+
+            // // Load external data and boot
+            // d3.json("world.json", function (data) {
+
+            //     // Draw the map
+            //     svg.select("#continents")
+            //         .selectAll("path")
+            //         .data(data.features)
+            //         .join("path")
+            //         .attr("fill", "white")
+            //         .attr("d", d3.geoPath()
+            //             .projection(projection)
+            //         )
+            //         .style("stroke", "black")
+            //         .style("stroke-width", 2)
+
+            //     // svg.select('#radiation').append("image")
+            //     //     .attr("xlink:href", imageChange)
+            //     //     .attr("class", "raster")
+            //     //     // preserve the aspect ratio
+            //     //     .attr("width", width)
+            //     //     .attr("height", height)
+            //     //     .attr("opacity", 0.85)
+            // });
+
+            // canvis = svg.select("#canvas")
+
+            // var context = canvis.node().getContext('2d')
+
+            // var image = new Image()
+            // image.onload = function () {
+            //     context.drawImage(image, 0, 0, image.width, image.height, 0, 0, width, height)
+            // }
+            // image.src = 'radiation.TIFF'
+        </script>
 </body>
 
 </html>
