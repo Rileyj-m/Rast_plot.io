@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Raster Plot: Net Radiation</title>
+    <!--Load d3.js-->
+    <script src="https://d3js.org/d3.v4.js"></script>
+    <script src="geotiff.min.js"></script>
+    <script src="https://d3js.org/d3-geo-projection.v3.min.js"></script>
+    <script src="https://d3js.org/topojson.v1.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <style>
+    </style>
+    <br>
+    <br>
+    <header style="text-align: center;"><b>Hypothesis:</b> There are larger numbers of wind turbine farms around state
+        capitals
+        compared to the rest of the United States.</header>
+    <header style="text-align: center;"><b>Source for Wind Turbines:</b> <a
+            href="https://www.kaggle.com/datasets/txtrouble/wind-farms?resource=download">Wind-Farms</a> <b>Source for
+            US
+            Geojson:</b> <a href="https://eric.clst.org/tech/usgeojson/">US Geojson</a></header>
+</head>
+
+<body>
+    <br>
+    <br>
+    <hr>
+    <div id="buttons" style="text-align: left;">
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+                aria-expanded="false">
+                Select a Month <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu btn-block">
+                <li><a class="dropdown-item" href="#" onclick="reloadImg('radiation.TIFF')">January</a></li>
+                <li><a class="dropdown-item" href="#" onclick="update('Feb')">February</a></li>
+                <li><a class="dropdown-item" href="#" onclick="update('Mar')">March</a></li>
+                <li><a class="dropdown-item" href="#" onclick="update('Apr')">April</a></li>
+                <li><a class="dropdown-item" href="#" onclick="update('May')">May</a></li>
+                <li><a class="dropdown-item" href="#" onclick="update('Jun')">June</a></li>
+                <li><a class="dropdown-item" href="#" onclick="update('Jul')">July</a></li>
+                <li><a class="dropdown-item" href="#" onclick="update('Aug')">August</a></li>
+                <li><a class="dropdown-item" href="#" onclick="update('Sep')">September</a></li>
+                <li><a class="dropdown-item" href="#" onclick="update('Oct')">October</a></li>
+                <li><a class="dropdown-item" href="#" onclick="update('Nov')">November</a></li>
+                <li><a class="dropdown-item" href="#" onclick="update('Dec')">December</a></li>
+            </ul>
+        </div>
+        <br>
+        <div id="Origin" style="text-align: center;">
+            <svg id="World" width="1440" height="720"></svg>
+        </div>
+        <script type="text/javascript">
+
+            const svg = d3.select("#World"),
+                width = +svg.attr("width"),
+                height = +svg.attr("height");
+
+            let projection = d3.geoMercator()
+                .scale(230)
+                .translate([width / 2, height / 2]);
+
+            var canvas = d3.select("#Origin").append("canvas")
+                .attr("width", width)
+                .attr("height", height)
+
+            var context = canvas.node().getContext("2d");
+
+            d3.request("rad2.tiff")
+                .responseType("arraybuffer")
+                .get(function (error, tiffData) {
+                    d3.json("world.json", function (error, world) {
+                        if (error) console.log(error);
+                        var countries = world
+                        var path = d3.geoPath()
+                            .projection(projection)
+                            .context(context);
+
+                        context.beginPath();
+                        context.fillStyle = "black";
+                        context.strokesyle = "red";
+                        path(countries);
+                        context.fill();
+                        context.stroke();
+
+                        var tiff = GeoTIFF.parse(tiffData.response);
+                        console.log("tiff", tiff);
+                        var image = tiff.getImage();
+                        console.log("image", image);
+                        var rasters = image.readRasters()[0];
+                        var tiepoint = image.getTiePoints()[0];
+                        console.log("tiepoint", tiepoint);
+                        console.log("rasters", rasters);
+                        var pixelScale = image.getFileDirectory().ModelPixelScale;
+                        var geoTransform = [tiepoint.x, pixelScale[0], 0, tiepoint.y, 0, -1 * pixelScale[1]];
+                        var invGeoTransform = [-geoTransform[0] / geoTransform[1], 1 / geoTransform[1], 0, -geoTransform[3] / geoTransform[5], 0, 1 / geoTransform[5]];
+
+                        var tempData = new Array(image.getHeight());
+                        for (var j = 0; j < image.getHeight(); j++) {
+                            tempData[j] = new Array(image.getWidth());
+                            for (var i = 0; i < image.getWidth(); i++) {
+                                tempData[j][i] = rasters[1][i + j * image.getWidth()];
+                            }
+                        }
+
+                        var canvasRaster = d3.select("#Origin").append("canvas")
+                            .attr("width", width)
+                            .attr("height", height);
+
+                        var contextRaster = canvasRaster.node().getContext("2d");
+
+                        var id = contextRaster.createImageData(width, height);
+                        var data = id.data;
+                        var pos = 0;
+                        for (var j = 0; j < height; j++) {
+                            for (var i = 0; i < width; i++) {
+                                var pointCoords = projection.invert([i, j]);
+                                var px = invGeoTransform[0] + pointCoords[0] * invGeoTransform[1];
+                                var py = invGeoTransform[3] + pointCoords[1] * invGeoTransform[5];
+
+                                if (Math.floor(px) >= 0 && Math.ceil(px) < image.getWidth() && Math.floor(py) >= 0 && Math.ceil(py) < image.getHeight()) {
+                                    //https://en.wikipedia.org/wiki/Bilinear_interpolation
+                                    var value = tempData[Math.floor(py)][Math.floor(px)] * (Math.ceil(px) - px) * (Math.ceil(py) - py) +
+                                        tempData[Math.floor(py)][Math.ceil(px)] * (px - Math.floor(px)) * (Math.ceil(py) - py) +
+                                        tempData[Math.ceil(py)][Math.floor(px)] * (Math.ceil(px) - px) * (py - Math.floor(py)) +
+                                        tempData[Math.ceil(py)][Math.ceil(px)] * (px - Math.floor(px)) * (py - Math.floor(py));
+
+                                    //var color = d3.rgb(d3.interpolateRdBu(1-((value- 14)/24)));
+                                    var v = (value - 14) / 24;
+                                    data[pos] = 134 * (v < 0.5 ? 2 * v : 1);
+                                    data[pos + 1] = 25 * (v < 0.5 ? 2 * v : 1 - 2 * (v - 0.5));
+                                    data[pos + 2] = 235 * (v < 0.5 ? 1 : 1 - 2 * (v - 0.5));
+                                    data[pos + 3] = 181;
+                                    pos = pos + 4
+                                }
+                            }
+                        }
+                        contextRaster.putImageData(id, 0, 0);
+                        console.log(contextRaster.putImageData(id, 0, 0))
+                        context.drawImage(canvasRaster.node(), 0, 0);
+                    });
+                });
+
+
+            // // Load external data and boot
+            // d3.json("world.json", function (data) {
+
+            //     // Draw the map
+            //     svg.select("#continents")
+            //         .selectAll("path")
+            //         .data(data.features)
+            //         .join("path")
+            //         .attr("fill", "white")
+            //         .attr("d", d3.geoPath()
+            //             .projection(projection)
+            //         )
+            //         .style("stroke", "black")
+            //         .style("stroke-width", 2)
+
+            //     // svg.select('#radiation').append("image")
+            //     //     .attr("xlink:href", imageChange)
+            //     //     .attr("class", "raster")
+            //     //     // preserve the aspect ratio
+            //     //     .attr("width", width)
+            //     //     .attr("height", height)
+            //     //     .attr("opacity", 0.85)
+            // });
+
+            // canvis = svg.select("#canvas")
+
+            // var context = canvis.node().getContext('2d')
+
+            // var image = new Image()
+            // image.onload = function () {
+            //     context.drawImage(image, 0, 0, image.width, image.height, 0, 0, width, height)
+            // }
+            // image.src = 'radiation.TIFF'
+        </script>
+</body>
+
+</html>

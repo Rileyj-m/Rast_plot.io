@@ -6,14 +6,24 @@
     <title>Raster Plot: Net Radiation</title>
     <!--Load d3.js-->
     <script src="https://d3js.org/d3.v4.js"></script>
+    <script src="https://d3js.org/d3.v5.js"></script>
     <script src="geotiff.min.js"></script>
     <script src="https://d3js.org/d3-geo-projection.v3.min.js"></script>
     <script src="https://d3js.org/topojson.v1.min.js"></script>
     <script src="https://unpkg.com/d3-contour@1"></script>
+    <script src="https://d3js.org/d3-scale-chromatic.v0.3.min.js"></script>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <style>
+        /* svg {
+            position: absolute;
+        }
+
+        Raster {
+            position: absolute;
+            z-index: -1;
+        } */
     </style>
     <br>
     <br>
@@ -37,7 +47,7 @@
                 Select a Month <span class="caret"></span>
             </button>
             <ul class="dropdown-menu btn-block">
-                <li><a class="dropdown-item" href="#" onclick="reloadImg('radiation.TIFF')">January</a></li>
+                <li><a class="dropdown-item" href="#" onclick="renderRaster('world.json')">January</a></li>
                 <li><a class="dropdown-item" href="#" onclick="update('Feb')">February</a></li>
                 <li><a class="dropdown-item" href="#" onclick="update('Mar')">March</a></li>
                 <li><a class="dropdown-item" href="#" onclick="update('Apr')">April</a></li>
@@ -51,111 +61,140 @@
                 <li><a class="dropdown-item" href="#" onclick="update('Dec')">December</a></li>
             </ul>
         </div>
-        <br>
-        <div id="Origin" style="text-align: center;">
-            <svg id="World" width="720" height="360"></svg>
-        </div>
-        <script type="text/javascript">
+    </div>
+    <br>
+    <div id="Origin" style="text-align: center;">
+        <svg id="World" width="720" height="360">
+            <g id="raster"></g>
+            <g id="allobj"></g>
+        </svg>
+    </div>
+    <svg id="seq37" width="200" height="20"></svg>
+    <script type="text/javascript">
+        let zoom = d3.zoom()
+            .scaleExtent([1, 8])
+            // we can't allow the user to pan outside of the world
+            .translateExtent([
+                [0, 0],
+                [720, 360]
+            ])
+            .on('zoom', handleZoom);
 
+        function handleZoom(e) {
+            d3.select('#raster')
+                .attr('transform', d3.zoomTransform(this));
+            d3.select('#allobj')
+                .attr('transform', d3.zoomTransform(this));
+        }
+
+        function initZoom() {
+            d3.select('svg')
+                .call(zoom);
+        }
+        function renderRaster(image) {
+            d3.request(image).responseType("arraybuffer").get(function (error, request) {
+                if (error) throw error;
+
+                var tiff = GeoTIFF.parse(request.response),
+                    image = tiff.getImage(),
+                    m = image.getHeight(),
+                    n = image.getWidth(),
+                    values = image.readRasters()[0];
+                console.log(values);
+
+                // var color = d3.scaleSequential(d3.interpolateRdYlGn)
+                //     .domain(d3.extent(values));
+
+                var color = d3.scaleLinear()
+                    .domain(d3.extent(values))
+                    .range(["#277da1", "#f94144"]);
+
+                const svg = d3.select("#World"),
+                    width = +svg.attr("width"),
+                    height = +svg.attr("height");
+
+                let projection = d3.geoMercator()
+                    .g// projections screwed up otherwise
+                // .scale(230)
+                // .translate([width / 2, height / 2]);
+
+                var path = d3.geoPath(projection);
+
+                var contours = d3.contours()
+                    .size([n, m]);
+
+                d3.select("#raster")
+                    // .attr("stroke", "#000")
+                    // .attr("stroke-width", 0.5)
+                    // .attr("stroke-linejoin", "round")
+                    .selectAll("path")
+                    .data(contours(values))
+                    .enter().append("path")
+                    .attr("fill", function (d) { return color(d.value); })
+                    .attr("d", path)
+                    .style("opacity", 0.9);
+            })
+        }
+
+        function renderMap() {
             const svg = d3.select("#World"),
                 width = +svg.attr("width"),
                 height = +svg.attr("height");
 
             let projection = d3.geoMercator()
-                .scale(230)
+                .scale(115)
                 .translate([width / 2, height / 2]);
 
-            var canvas = d3.select("#Origin").append("canvas")
-                .attr("width", width)
-                .attr("height", height)
+            // Load external data and boot
+            d3.json("world.json").then(function (data) {
 
-            var context = canvas.node().getContext("2d");
+                // Draw the map
+                d3.select("#allobj")
+                    .selectAll("path")
+                    .data(data.features)
+                    .join("path")
+                    .attr("fill", "none")
+                    .attr("d", d3.geoPath()
+                        .projection(projection)
+                    )
+                    .style("stroke", "black")
+            })
+        };
 
-            d3.request("rad21.tiff")
-                .responseType("arraybuffer")
-                .get(function (error, tiffData) {
-                    d3.json("world.json", function (error, world) {
-                        if (error) console.log(error);
-                        var countries = world
-                        var path = d3.geoPath()
-                            .projection(projection)
-                            .context(context);
+        function drawScale(id, interpolator) {
+            var data = Array.from(Array(100).keys());
 
-                        context.beginPath();
-                        context.fillStyle = "black";
-                        context.strokesyle = "red";
-                        path(countries);
-                        context.fill();
-                        context.stroke();
+            var cScale = d3.scaleLinear()
+                .domain([0, 100])
+                .range(["#277da1", "#f94144"]);
 
-                        var canvasRaster = d3.select("#Origin").append("canvas")
-                        .attr("id", "canvasRaster")
-                        .attr("width", width)
-                        .attr("height", height);
+            var xScale = d3.scaleLinear()
+                .domain([0, 99])
+                .range([0, 200]);
 
-                        var contextRaster = canvasRaster.node().getContext("2d");
+            var u = d3.select("#" + id)
+                .selectAll("rect")
+                .data(data)
+                .enter()
+                .append("rect")
+                .attr("x", (d) => Math.floor(xScale(d)))
+                .attr("y", 0)
+                .attr("height", 40)
+                .attr("width", (d) => {
+                    if (d == 99) {
+                        return 6;
+                    }
+                    return Math.floor(xScale(d + 1)) - Math.floor(xScale(d)) + 1;
+                })
+                .attr("fill", (d) => cScale(d));
+        }
 
-                        var tiff = GeoTIFF.parse(tiffData.response),
-                            image = tiff.getImage(),
-                            m = image.getHeight(),
-                            n = image.getWidth(),
-                            values = image.readRasters()[0];
-                        console.log(values);
+        initZoom();
+        renderRaster("rad21.tiff");
+        renderMap();
+        drawScale("seq37", d3.interpolateRdYlGn);
 
-                        var color = d3.scaleSequential(d3.interpolateMagma)
-                            .domain(d3.extent(values));
-
-                        var contours = d3.contours()
-                            .size([n, m]);
-
-                        d3.select("#canvasRaster")
-                            // .attr("stroke", "#000")
-                            // .attr("stroke-width", 0.5)
-                            // .attr("stroke-linejoin", "round")
-                            .selectAll("path")
-                            .data(contours(values))
-                            .enter().append("path")
-                            .attr("fill", function (d) { return color(d.value); })
-                            .attr("d", path)
-                            .style("opacity", 0.1);
-                    });
-                });
-
-
-            // // Load external data and boot
-            // d3.json("world.json", function (data) {
-
-            //     // Draw the map
-            //     svg.select("#continents")
-            //         .selectAll("path")
-            //         .data(data.features)
-            //         .join("path")
-            //         .attr("fill", "white")
-            //         .attr("d", d3.geoPath()
-            //             .projection(projection)
-            //         )
-            //         .style("stroke", "black")
-            //         .style("stroke-width", 2)
-
-            //     // svg.select('#radiation').append("image")
-            //     //     .attr("xlink:href", imageChange)
-            //     //     .attr("class", "raster")
-            //     //     // preserve the aspect ratio
-            //     //     .attr("width", width)
-            //     //     .attr("height", height)
-            //     //     .attr("opacity", 0.85)
-            // });
-
-            // canvis = svg.select("#canvas")
-
-            // var context = canvis.node().getContext('2d')
-
-            // var image = new Image()
-            // image.onload = function () {
-            //     context.drawImage(image, 0, 0, image.width, image.height, 0, 0, width, height)
-            // }
-            // image.src = 'radiation.TIFF'
-        </script>
+    </script>
 </body>
 
 </html>
