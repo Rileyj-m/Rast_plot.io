@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <title>Raster Plot: Net Radiation</title>
-    <!--Load d3.js-->
+    <!--Load d3.js and anything else needed-->
     <script src="https://d3js.org/d3.v4.js"></script>
     <script src="https://d3js.org/d3.v5.js"></script>
     <script src="geotiff.min.js"></script>
@@ -16,57 +16,70 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <style>
-        /* svg {
-            position: absolute;
-        }
-
-        Raster {
-            position: absolute;
-            z-index: -1;
-        } */
     </style>
     <br>
     <br>
-    <header style="text-align: center;"><b>Hypothesis:</b> There are larger numbers of wind turbine farms around state
-        capitals
-        compared to the rest of the United States.</header>
-    <header style="text-align: center;"><b>Source for Wind Turbines:</b> <a
-            href="https://www.kaggle.com/datasets/txtrouble/wind-farms?resource=download">Wind-Farms</a> <b>Source for
-            US
-            Geojson:</b> <a href="https://eric.clst.org/tech/usgeojson/">US Geojson</a></header>
+    <header style="text-align: center;"><b>Hypothesis:</b> There is more net radiation near the equator
+        in the summer months (June, July, August) than any other time during the year.
+    </header>
+    <header style="text-align: center;">
+        <b>Net Radiation Definition:</b> The difference between how much solar energy enters the Earth
+        system and how much heat energy escapes into space (average over time period).
+    </header>
+    <header style="text-align: center;"><b>Source for Net Radiation Rasters:</b> <a
+            href="https://neo.gsfc.nasa.gov/view.php?datasetId=CERES_NETFLUX_M&year=2021">Net Radiation</a>
+    </header>
 </head>
 
 <body>
     <br>
     <br>
     <hr>
-    <div id="buttons" style="text-align: left;">
+    <div id="buttons" style="margin-left: 210px;">
         <div class="btn-group">
             <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
                 aria-expanded="false">
                 Select a Month <span class="caret"></span>
             </button>
             <ul class="dropdown-menu btn-block">
-                <li><a class="dropdown-item" href="#" onclick="renderRaster('world.json')">January</a></li>
-                <li><a class="dropdown-item" href="#" onclick="update('Feb')">February</a></li>
-                <li><a class="dropdown-item" href="#" onclick="update('Mar')">March</a></li>
-                <li><a class="dropdown-item" href="#" onclick="update('Apr')">April</a></li>
-                <li><a class="dropdown-item" href="#" onclick="update('May')">May</a></li>
-                <li><a class="dropdown-item" href="#" onclick="update('Jun')">June</a></li>
-                <li><a class="dropdown-item" href="#" onclick="update('Jul')">July</a></li>
-                <li><a class="dropdown-item" href="#" onclick="update('Aug')">August</a></li>
-                <li><a class="dropdown-item" href="#" onclick="update('Sep')">September</a></li>
-                <li><a class="dropdown-item" href="#" onclick="update('Oct')">October</a></li>
-                <li><a class="dropdown-item" href="#" onclick="update('Nov')">November</a></li>
-                <li><a class="dropdown-item" href="#" onclick="update('Dec')">December</a></li>
+                <li><a class="dropdown-item"
+                        onmousedown="changeRaster('rasters/jan21.tiff', 'January 2021: Net Radiation')">January</a></li>
+                <li><a class="dropdown-item"
+                        onmousedown="changeRaster('rasters/feb21.tiff', 'February 2021: Net Radiation')">February</a>
+                </li>
+                <li><a class="dropdown-item"
+                        onmousedown="changeRaster('rasters/mar21.tiff', 'March 2021: Net Radiation')">March</a></li>
+                <li><a class="dropdown-item"
+                        onmousedown="changeRaster('rasters/apr21.tiff', 'April 2021: Net Radiation')">April</a></li>
+                <li><a class="dropdown-item"
+                        onmousedown="changeRaster('rasters/may21.tiff', 'May 2021: Net Radiation')">May</a></li>
+                <li><a class="dropdown-item"
+                        onmousedown="changeRaster('rasters/jun21.tiff', 'June 2021: Net Radiation')">June</a></li>
+                <li><a class="dropdown-item"
+                        onmousedown="changeRaster('rasters/jul21.tiff', 'July 2021: Net Radiation')">July</a></li>
+                <li><a class="dropdown-item"
+                        onmousedown="changeRaster('rasters/aug21.tiff', 'August 2021: Net Radiation')">August</a></li>
+                <li><a class="dropdown-item"
+                        onmousedown="changeRaster('rasters/sep21.tiff', 'September 2021: Net Radiation')">September</a>
+                </li>
+                <li><a class="dropdown-item"
+                        onmousedown="changeRaster('rasters/oct21.tiff', 'October 2021: Net Radiation')">October</a></li>
+                <li><a class="dropdown-item"
+                        onmousedown="changeRaster('rasters/nov21.tiff', 'November 2021: Net Radiation')">November</a>
+                </li>
+                <li><a class="dropdown-item"
+                        onmousedown="changeRaster('rasters/dec21.tiff', 'December 2021: Net Radiation')">December</a>
+                </li>
             </ul>
         </div>
+        <text id="title"></text>
     </div>
     <br>
     <div id="Origin" style="text-align: center;">
         <svg id="World" width="720" height="360">
             <g id="raster"></g>
             <g id="allobj"></g>
+            <g id="equator"></g>
         </svg>
     </div>
     <svg id="seq37" width="200" height="20"></svg>
@@ -80,17 +93,25 @@
             ])
             .on('zoom', handleZoom);
 
+        // handle the elements of the zoom so that nothing is lost
         function handleZoom(e) {
             d3.select('#raster')
                 .attr('transform', d3.zoomTransform(this));
             d3.select('#allobj')
                 .attr('transform', d3.zoomTransform(this));
+            d3.select('#equator')
+                .attr('transform', d3.zoomTransform(this));
+            d3.select('#equatorText')
+                .attr('transform', d3.zoomTransform(this));
         }
 
+        // call the zoom functions accordingly
         function initZoom() {
             d3.select('svg')
                 .call(zoom);
         }
+
+        // use to create the raster image
         function renderRaster(image) {
             d3.request(image).responseType("arraybuffer").get(function (error, request) {
                 if (error) throw error;
@@ -136,6 +157,7 @@
             })
         }
 
+        // used to create the map of the world over the raster
         function renderMap() {
             const svg = d3.select("#World"),
                 width = +svg.attr("width"),
@@ -146,7 +168,7 @@
                 .translate([width / 2, height / 2]);
 
             // Load external data and boot
-            d3.json("world.json").then(function (data) {
+            d3.json("jsons/world.json").then(function (data) {
 
                 // Draw the map
                 d3.select("#allobj")
@@ -159,8 +181,31 @@
                     )
                     .style("stroke", "black")
             })
+
+            // Load external data and boot
+            d3.json("jsons/the-equator.geojson").then(function (data) {
+
+                // Draw the map
+                d3.select("#equator")
+                    .selectAll("path")
+                    .data(data.features)
+                    .join("path")
+                    .attr("fill", "none")
+                    .attr("d", d3.geoPath()
+                        .projection(projection)
+                    )
+                    .style("stroke", "black")
+            })
+
+            // we have to check if the text attribute equatorText exists
+            // if not, we create it
+            if (d3.select("#equatorText").empty()) {
+                svg.append("text").attr("x", 40).attr("y", 173).text("Equator").style("font-size", "10pt").attr("alignment-baseline", "middle").style("font-style", "sans-serif").style("fill", "black").attr("id", "equatorText");
+            }
+
         };
 
+        // the scale for the colors
         function drawScale(id, interpolator) {
             var data = Array.from(Array(100).keys());
 
@@ -189,12 +234,38 @@
                 .attr("fill", (d) => cScale(d));
         }
 
-        initZoom();
-        renderRaster("rad21.tiff");
-        renderMap();
-        drawScale("seq37", d3.interpolateRdYlGn);
+        // change rast function on click
+        function changeRaster(change, textChange) {
+            console.log(change);
+            document.getElementById("raster").remove();
+            // first I have to add a new <g> element to hold the raster
+            // but I need to make sure to append it in front of the allobj group otherwise it wont display correctly
+            d3.select("#World").insert("g", "#allobj")
+                .attr("id", "raster");
+            d3.select("#World").append("g").attr("id", "raster");
+            renderRaster(change);
+            renderMap();
+            appendTitle(textChange);
+        }
 
+        // title change function for every raster
+        function appendTitle(textAppend) {
+            d3.select("#title").remove();
+            d3.select("#buttons").append("text").text(textAppend).style("font-size", "12pt").style("font-style", "sans-serif").attr("id", "title").style("margin-left", "50px").style("font-weight", "bold");
+        }
+
+        // start all operations
+        function startOp() {
+            initZoom();
+            renderRaster('rasters/jan21.tiff');
+            renderMap();
+            drawScale("seq37", d3.interpolateRdYlGn);
+            appendTitle("January 2021: Net Radiation");
+        }
+
+        startOp();
     </script>
+
 </body>
 
 </html>
