@@ -38,6 +38,9 @@
             margin: 0 auto;
             border-radius: 5px;
         }
+        .shadow{
+            box-shadow: 0 0 10px 5px #888888;
+        }
         body {
             font: 11px sans-serif;
             background-color: #f5f5f5;
@@ -50,7 +53,7 @@
     </header>
     <header style="text-align: center;">
         <b>Net Radiation Definition:</b> The difference between how much solar energy enters the Earth
-        system and how much heat energy escapes into space (average over time period).
+        system and how much heat energy escapes into space (watts per square meter).
     </header>
     <header style="text-align: center;"><b>Source for Net Radiation Rasters:</b> <a
             href="https://neo.gsfc.nasa.gov/view.php?datasetId=CERES_NETFLUX_M&year=2021">Net Radiation</a>
@@ -63,8 +66,7 @@
     <br>
     <br>
     <div id="container" width="1200" height="900">
-        <div id="rectangle">
-        </div>
+        <div id="rectangle"></div>
         <div id="Origin" style="text-align: center;">
             <div id="buttons" style="margin-right: 910px; position: relative; display: block; margin-top: 20px;">
                 <div class="btn-group">
@@ -111,7 +113,7 @@
                     </ul>
                 </div>
             </div>
-            <svg id="World" width="720" height="360">
+            <svg class="shadow" id="World" width="720" height="360">
                 <g id="raster"></g>
                 <g id="allobj"></g>
                 <g id="equator"></g>
@@ -239,9 +241,8 @@
             // we have to check if the text attribute equatorText exists
             // if not, we create it
             if (d3.select("#equatorText").empty()) {
-                svg.append("text").attr("x", 40).attr("y", 173).text("Equator").style("font-size", "10pt").attr("alignment-baseline", "middle").style("font-style", "sans-serif").style("fill", "black").attr("id", "equatorText");
+                svg.append("text").attr("x", 10).attr("y", 173).text("Equator").style("font-size", "8pt").attr("alignment-baseline", "middle").style("font-style", "sans-serif").style("fill", "#f2f2f2").attr("id", "equatorText");
             }
-
         };
 
         // the scale for the colors
@@ -282,7 +283,7 @@
         // title change function for every raster
         function appendTitle(textAppend) {
             d3.select("#title").remove();
-            d3.select("#allobj").append("text").text(textAppend).style("font-size", "9pt").style("font-style", "sans-serif").attr("id", "title").style("margin-left", "50px").style("font-weight", "bold").attr("x", 10).attr("y", 350).style("fill", "white");
+            d3.select("#allobj").append("text").text(textAppend).style("font-size", "9pt").style("font-style", "sans-serif").attr("id", "title").style("margin-left", "50px").style("font-weight", "bold").attr("x", 10).attr("y", 350).style("fill", "#f2f2f2");
         }
 
         // start all operations
