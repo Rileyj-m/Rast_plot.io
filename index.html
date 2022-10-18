@@ -7,6 +7,7 @@
     <!--Load d3.js and anything else needed-->
     <script src="https://d3js.org/d3.v4.js"></script>
     <script src="https://d3js.org/d3.v5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.13.0/d3-legend.js"></script>
     <script src="geotiff.min.js"></script>
     <script src="https://d3js.org/d3-geo-projection.v3.min.js"></script>
     <script src="https://d3js.org/topojson.v1.min.js"></script>
@@ -16,6 +17,31 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <style>
+        #container{
+            position: relative;
+        }
+        #rectangle, #Origin{
+            position: absolute;
+        }
+        #Origin{
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+        #rectangle{
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1100px;
+            height: 550px;
+            border: 1px solid black;
+            background-color: #d9d9d9;
+            margin: 0 auto;
+            border-radius: 5px;
+        }
+        body {
+            font: 11px sans-serif;
+            background-color: #f5f5f5;
+        }
     </style>
     <br>
     <br>
@@ -34,55 +60,68 @@
 <body>
     <br>
     <hr>
-    <div id="buttons" style="margin-left: 210px; position: fixed;">
-        <div class="btn-group">
-            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
-                aria-expanded="false">
-                Select a Month <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu btn-block">
-                <li><a class="dropdown-item"
-                        onmousedown="changeRaster('rasters/jan21.tiff', 'January 2021: Net Radiation')">January</a></li>
-                <li><a class="dropdown-item"
-                        onmousedown="changeRaster('rasters/feb21.tiff', 'February 2021: Net Radiation')">February</a>
-                </li>
-                <li><a class="dropdown-item"
-                        onmousedown="changeRaster('rasters/mar21.tiff', 'March 2021: Net Radiation')">March</a></li>
-                <li><a class="dropdown-item"
-                        onmousedown="changeRaster('rasters/apr21.tiff', 'April 2021: Net Radiation')">April</a></li>
-                <li><a class="dropdown-item"
-                        onmousedown="changeRaster('rasters/may21.tiff', 'May 2021: Net Radiation')">May</a></li>
-                <li><a class="dropdown-item"
-                        onmousedown="changeRaster('rasters/jun21.tiff', 'June 2021: Net Radiation')">June</a></li>
-                <li><a class="dropdown-item"
-                        onmousedown="changeRaster('rasters/jul21.tiff', 'July 2021: Net Radiation')">July</a></li>
-                <li><a class="dropdown-item"
-                        onmousedown="changeRaster('rasters/aug21.tiff', 'August 2021: Net Radiation')">August</a></li>
-                <li><a class="dropdown-item"
-                        onmousedown="changeRaster('rasters/sep21.tiff', 'September 2021: Net Radiation')">September</a>
-                </li>
-                <li><a class="dropdown-item"
-                        onmousedown="changeRaster('rasters/oct21.tiff', 'October 2021: Net Radiation')">October</a></li>
-                <li><a class="dropdown-item"
-                        onmousedown="changeRaster('rasters/nov21.tiff', 'November 2021: Net Radiation')">November</a>
-                </li>
-                <li><a class="dropdown-item"
-                        onmousedown="changeRaster('rasters/dec21.tiff', 'December 2021: Net Radiation')">December</a>
-                </li>
-            </ul>
+    <br>
+    <br>
+    <div id="container" width="1200" height="900">
+        <div id="rectangle">
         </div>
-        <text id="title"></text>
+        <div id="Origin" style="text-align: center;">
+            <div id="buttons" style="margin-right: 910px; position: relative; display: block; margin-top: 20px;">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
+                        aria-haspopup="true" aria-expanded="false">
+                        Select a Month <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu btn-block">
+                        <li><a class="dropdown-item"
+                                onmousedown="changeRaster('rasters/Jan21.tiff', 'January 2021: Net Radiation')">January</a>
+                        </li>
+                        <li><a class="dropdown-item"
+                                onmousedown="changeRaster('rasters/feb21.tiff', 'February 2021: Net Radiation')">February</a>
+                        </li>
+                        <li><a class="dropdown-item"
+                                onmousedown="changeRaster('rasters/mar21.tiff', 'March 2021: Net Radiation')">March</a>
+                        </li>
+                        <li><a class="dropdown-item"
+                                onmousedown="changeRaster('rasters/apr21.tiff', 'April 2021: Net Radiation')">April</a>
+                        </li>
+                        <li><a class="dropdown-item"
+                                onmousedown="changeRaster('rasters/may21.tiff', 'May 2021: Net Radiation')">May</a></li>
+                        <li><a class="dropdown-item"
+                                onmousedown="changeRaster('rasters/jun21.tiff', 'June 2021: Net Radiation')">June</a>
+                        </li>
+                        <li><a class="dropdown-item"
+                                onmousedown="changeRaster('rasters/jul21.tiff', 'July 2021: Net Radiation')">July</a>
+                        </li>
+                        <li><a class="dropdown-item"
+                                onmousedown="changeRaster('rasters/aug21.tiff', 'August 2021: Net Radiation')">August</a>
+                        </li>
+                        <li><a class="dropdown-item"
+                                onmousedown="changeRaster('rasters/sep21.tiff', 'September 2021: Net Radiation')">September</a>
+                        </li>
+                        <li><a class="dropdown-item"
+                                onmousedown="changeRaster('rasters/oct21.tiff', 'October 2021: Net Radiation')">October</a>
+                        </li>
+                        <li><a class="dropdown-item"
+                                onmousedown="changeRaster('rasters/nov21.tiff', 'November 2021: Net Radiation')">November</a>
+                        </li>
+                        <li><a class="dropdown-item"
+                                onmousedown="changeRaster('rasters/dec21.tiff', 'December 2021: Net Radiation')">December</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <svg id="World" width="720" height="360">
+                <g id="raster"></g>
+                <g id="allobj"></g>
+                <g id="equator"></g>
+                <text id="title"></text>
+            </svg>
+            <div style="margin: 0 auto; position: relative; display: block;">
+                <svg id="seq37" width="720" height="100"></svg>
+            </div>
+        </div>
     </div>
-    <br>
-    <br>
-    <div id="Origin" style="text-align: center;">
-        <svg id="World" width="720" height="360">
-            <g id="raster"></g>
-            <g id="allobj"></g>
-            <g id="equator"></g>
-        </svg>
-    </div>
-    <svg id="seq37" width="200" height="20"></svg>
     <script type="text/javascript">
         let zoom = d3.zoom()
             .scaleExtent([1, 8])
@@ -207,31 +246,23 @@
 
         // the scale for the colors
         function drawScale(id, interpolator) {
+            var svg = d3.select("#" + id);
             var data = Array.from(Array(100).keys());
 
             var cScale = d3.scaleLinear()
                 .domain([0, 100])
                 .range(["#277da1", "#f94144"]);
 
-            var xScale = d3.scaleLinear()
-                .domain([0, 99])
-                .range([0, 200]);
-
-            var u = d3.select("#" + id)
-                .selectAll("rect")
-                .data(data)
-                .enter()
-                .append("rect")
-                .attr("x", (d) => Math.floor(xScale(d)))
-                .attr("y", 0)
-                .attr("height", 40)
-                .attr("width", (d) => {
-                    if (d == 99) {
-                        return 6;
-                    }
-                    return Math.floor(xScale(d + 1)) - Math.floor(xScale(d)) + 1;
-                })
-                .attr("fill", (d) => cScale(d));
+            var legend = d3.legendColor()
+                .scale(cScale)
+                .orient('horizontal')
+                .shapeWidth(10)
+                .title('W / m^2')
+                .cells(15)
+                .labels(["-280", "", "", "", "", "", "", "0", "", "", "", "", "", "", "280"]);
+            svg.append('g')
+                .attr('transform', 'translate(515, 25)')
+                .call(legend);
         }
 
         // change rast function on click
@@ -251,7 +282,7 @@
         // title change function for every raster
         function appendTitle(textAppend) {
             d3.select("#title").remove();
-            d3.select("#buttons").append("text").text(textAppend).style("font-size", "12pt").style("font-style", "sans-serif").attr("id", "title").style("margin-left", "50px").style("font-weight", "bold");
+            d3.select("#allobj").append("text").text(textAppend).style("font-size", "9pt").style("font-style", "sans-serif").attr("id", "title").style("margin-left", "50px").style("font-weight", "bold").attr("x", 10).attr("y", 350).style("fill", "white");
         }
 
         // start all operations
