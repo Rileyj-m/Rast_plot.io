@@ -17,18 +17,22 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <style>
-        #container{
+        #container {
             position: relative;
         }
-        #rectangle, #Origin{
+
+        #rectangle,
+        #Origin {
             position: absolute;
         }
-        #Origin{
+
+        #Origin {
             left: 50%;
             transform: translateX(-50%);
             z-index: 10;
         }
-        #rectangle{
+
+        #rectangle {
             left: 50%;
             transform: translateX(-50%);
             width: 1100px;
@@ -38,12 +42,22 @@
             margin: 0 auto;
             border-radius: 5px;
         }
-        .shadow{
-            box-shadow: 
-            0 0 10px 5px #888888 inset,
-            0 0 10px 5px #888888,
-            0 0 0 0  #888888 inset;
+
+        .shadow {
+            box-shadow:
+                0 0 10px 5px #888888 inset,
+                0 0 10px 5px #888888,
+                0 0 0 0 #888888 inset;
         }
+
+        #ending{
+            margin-top: 600px;          
+        }
+
+        header{
+            font: 11px sans-serif;
+        }
+
         body {
             font: 11px sans-serif;
             background-color: #f5f5f5;
@@ -58,8 +72,11 @@
         <b>Net Radiation Definition:</b> The difference between how much solar energy enters the Earth
         system and how much heat energy escapes into space (watts per square meter).
     </header>
+    <header style="text-align: center;">
+        <b>Graph Features:</b> This graph has the ability to zoom.
+    </header>
     <header style="text-align: center;"><b>Source for Net Radiation Rasters:</b> <a
-            href="https://neo.gsfc.nasa.gov/view.php?datasetId=CERES_NETFLUX_M&year=2021">Net Radiation</a>
+            href="https://neo.gsfc.nasa.gov/view.php?datasetId=CERES_NETFLUX_M&year=2021" target="_blank"><u>Net Radiation</u></a>
     </header>
 </head>
 
@@ -126,6 +143,15 @@
                 <svg id="seq37" width="720" height="100"></svg>
             </div>
         </div>
+        <br>
+    </div>
+    <div id="ending">
+        <br>
+        <br>
+        <hr>
+        <br>
+        <br>
+        <br>
     </div>
     <script type="text/javascript">
         let zoom = d3.zoom()
